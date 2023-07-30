@@ -1,1 +1,61 @@
+<img id="target" src="http://127.0.0.1:8080/Img1.jpg">
 
+<button (click)="remove()">Remove</button>
+<button (click)="addBG()">Add BG</button>
+<button (click)="removeBG()">Remove BG</button>
+<button (click)="getCoOrdinates()">Get Co-ordinates</button>
+
+
+
+
+import { Component, OnInit, AfterViewInit } from '@angular/core';
+declare var Jcrop: any;
+
+@Component({
+  selector: 'app-jcrop-test',
+  templateUrl: './jcrop-test.component.html',
+  styleUrls: ['./jcrop-test.component.scss']
+})
+export class JcropTestComponent implements OnInit, AfterViewInit {
+
+  jcp: any;
+  constructor() { }
+
+  ngOnInit(): void {
+  }
+
+  ngAfterViewInit(): void {
+    Jcrop.load('target').then((img: any) => {
+      //You can enable multiple cropping with this line:
+      this.jcp = Jcrop.attach(img, { multi: true });
+    });
+  }
+
+  remove() {
+    this.jcp.removeWidget(this.jcp.active);
+  }
+
+  addBG() {
+    console.log(this.jcp.active.el);
+    this.jcp.active.el.style.backgroundColor = "red";
+  }
+
+  removeBG() {
+    this.jcp.active.el.style.backgroundColor = "";
+  }
+
+  getCoOrdinates() {
+    if (this.jcp.active) {
+      this.jcp.crops.forEach((area: any) => {
+        console.log(area.pos.x, area.pos.y, area.pos.w, area.pos.h);
+      })
+    }
+  }
+
+}
+
+
+  <link rel="stylesheet" href="https://unpkg.com/jcrop/dist/jcrop.css">
+  <script src="https://unpkg.com/jcrop"></script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
