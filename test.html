@@ -59,3 +59,29 @@ export class JcropTestComponent implements OnInit, AfterViewInit {
   <script src="https://unpkg.com/jcrop"></script>
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+
+
+
+
+
+
+  getCoOrdinates() {
+    if (this.jcp.active) {
+      console.log(this.jcp.srcEl.naturalWidth , this.jcp.srcEl.width);
+      
+      var ratioW = this.jcp.srcEl.naturalWidth / this.jcp.srcEl.width;
+        var ratioH = this.jcp.srcEl.naturalHeight / this.jcp.srcEl.height;
+        var currentRatio = Math.min(ratioW, ratioH);
+        // $('#x').val(Math.round(coords.x * currentRatio));
+        // $('#y').val(Math.round(coords.y * currentRatio));
+        // $('#w').val(Math.round(coords.w * currentRatio));
+        // $('#h').val(Math.round(coords.h * currentRatio));
+      //console.log(this.jcp.srcEl);
+      
+      this.jcp.crops.forEach((area: any) => {
+        console.log(area.pos.x*ratioW, area.pos.y*ratioH, area.pos.w*ratioW, area.pos.h*ratioH);
+        //console.log(area.pos.x, area.pos.y, area.pos.w, area.pos.h);
+      })
+    }
+  }
