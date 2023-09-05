@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/1.4.0/fabric.min.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/510/fabric.min.js"></script>
+    <style>
+        .canvas-container-el {
+            height: 500px;
+            width: 1500px;
+            overflow: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="canvas-container-el">
+        <canvas id="c"> </canvas>
+    </div>
+
+    <button onclick="drawRectangle()">Rectangle</button>
+    <button onclick="drawCircle()">Circle</button>
+    <button onclick="freeDraw()">Free Draw</button>
+    <button onclick="stopDrawing()">Stop Draw</button>
+    <button onclick="fillColor()">Fill Color</button>
+    <button onclick="deleteObject()">Delete</button>
+    <button onclick="DownloadCanvasAsImage()">Save</button>
+</body>
+<script>
+    var canvas = new fabric.Canvas('c');
+    // Initiate a canvas instance
+    // var canvas = new fabric.Canvas("canvas");
+    // Image URL
+    var imageURL = "http://127.0.0.1:8080/Img2.jpg";
+    canvas.setBackgroundImage(imageURL, canvas.renderAll.bind(canvas), {
+        // backgroundImageOpacity: 1,
+        // originX: "left",
+        // originY: "top",
+        // top: 90,
+        // left: 70,
+        // scaleX: 1.1,
+        // scaleY: 1.1,
+    });
+
+    const getMeta = (url, cb) => {
+        const img = new Image();
+        img.onload = () => cb(null, img);
+        img.onerror = (err) => cb(err);
+        img.src = url;
+    };
+
+    // Use like:
+    getMeta(imageURL, (err, img) => {
+        console.log(img.naturalWidth, img.naturalHeight);
+        canvas.setWidth(img.naturalWidth);
+        canvas.setHeight(img.naturalHeight);
+    });
+
+    function freeDraw() {
+        removeEvents();
+        canvas.isDrawingMode = true;
+        canvas.on('mouse:down', function (options) {
+            startRecording();
+        });
+    }
+
+    function startRecording() {
+        var lines = [];
+        var line = [];
+        canvas.on('mouse:move', recordMoment);
+        canvas.on("mouse:up", stopRecording);
+
+        function recordMoment(event) {
+            line.push({ x: event.e.offsetX, y: event.e.offsetY });
+            // console.log(event.e.x + " " + event.e.y);    
+        }
+        function stopRecording() {
+            lines.push(line);
+            canvas.off('mouse:move', recordMoment);
+            canvas.off("mouse:up", stopRecording);
+            console.log(lines);
+            let linesArr = [line];
+            if (localStorage.getItem("lineCoordinates")) {
+                linesArr = JSON.stringify(localStorage.getItem("lineCoordinates")).push([line]);
+            }
+            //localStorage.setItem("lineCoordinates", linesArr);
+        }
+    }
+
+    function stopDrawing() {
+        canvas.isDrawingMode = false;
+        // canvas.freeDrawingBrush.onMouseUp();
+    }
+
+    function deleteObject() {
+        // canvas.getActiveObject().remove();
+        canvas.remove(canvas.getActiveObject());
+    }
+
+    function fillColor() {
+        canvas.getActiveObjects().forEach((obj) => {
+            // canvas.remove(obj)
+            obj.set("fill", 'black');
+        });
+        canvas.renderAll();
+    }
+
+    function drawCircle() {
+        removeEvents();
+        var ellipse, isDown, origX, origY, drawingMode = true;;
+
+        canvas.on('mouse:down', function (o) {
+            if (drawingMode) {
+                isDown = true;
+                var pointer = canvas.getPointer(o.e);
+                origX = pointer.x;
+                origY = pointer.y;
+                ellipse = new fabric.Ellipse({
+                    left: origX,
+                    top: origY,
+                    originX: 'left',
+                    originY: 'top',
+                    rx: pointer.x - origX,
+                    ry: pointer.y - origY,
+                    angle: 0,
+                    fill: '',
+                    stroke: '#FFF',
+                    strokeWidth: 1,
+                });
+                canvas.add(ellipse);
+            }
+        });
+
+        canvas.on('mouse:move', function (o) {
+            if (!isDown) return;
+            var pointer = canvas.getPointer(o.e);
+            var rx = Math.abs(origX - pointer.x) / 2;
+            var ry = Math.abs(origY - pointer.y) / 2;
+            if (rx > ellipse.strokeWidth) {
+                rx -= ellipse.strokeWidth / 2
+            }
+            if (ry > ellipse.strokeWidth) {
+                ry -= ellipse.strokeWidth / 2
+            }
+            ellipse.set({ rx: rx, ry: ry });
+
+            if (origX > pointer.x) {
+                ellipse.set({ originX: 'right' });
+            } else {
+                ellipse.set({ originX: 'left' });
+            }
+            if (origY > pointer.y) {
+                ellipse.set({ originY: 'bottom' });
+            } else {
+                ellipse.set({ originY: 'top' });
+            }
+            canvas.renderAll();
+        });
+
+        canvas.on('mouse:up', function (o) {
+            isDown = false;
+        });
+
+        canvas.on('selection:created', (options) => {
+            console.log('selection:selected')
+            drawingMode = false;
+        });
+
+        canvas.on('selection:cleared', (options) => {
+            console.log('selection:cleared')
+            drawingMode = true;
+        });
+    }
+
+    function drawRectangle() {
+        removeEvents();
+        var line, isDown = false, startPosition, rect, drawingMode = true;
+        canvas.on('mouse:down', (options) => {
+            console.log("mouse:down", drawingMode)
+            if (drawingMode) {
+                isDown = true;
+                console.log(options.e.clientX, options.e.clientY);
+                startPosition = canvas.getPointer(options.e);
+                rect = new fabric.Rect({
+                    left: startPosition.x,
+                    top: startPosition.y,
+                    width: 0,
+                    height: 0,
+                    stroke: '#FFF',
+                    strokeWidth: 1,
+                    fill: ''
+                });
+                // rect.lockRotation = true;
+                canvas.add(rect);
+            }
+            canvas.on('mouse:up', (options) => {
+                console.log("mouse:up")
+                isDown = false;
+                //canvas.add(rect);
+            });
+
+            canvas.on('mouse:move', (options) => {
+                console.log("mouse:move", 'isDown ', isDown, "drawingMode ", drawingMode)
+                if (isDown || drawingMode) {
+                    let endPosition = canvas.getPointer(options.e);
+                    rect.set('width', (endPosition.x - startPosition.x));
+                    rect.set('height', (endPosition.y - startPosition.y));
+
+                    canvas.renderAll();
+                }
+            });
+        });
+
+        canvas.on('selection:created', (options) => {
+            console.log('selection:selected')
+            drawingMode = false;
+        });
+
+        canvas.on('selection:cleared', (options) => {
+            console.log('selection:cleared')
+            drawingMode = true;
+        });
+    }
+
+    function removeEvents() {
+        canvas.off('mouse:down');
+        canvas.off('mouse:up');
+        canvas.off('mouse:move');
+        canvas.off('path:created');
+        canvas.off('selection:cleared');
+        canvas.off('selection:created');
+    }
+
+    function restoreCoOrdinates() {
+        // const pointer = canvas.getPointer(e);
+        // const options = {pointer, e:{}}
+        // var brush = new fabric.PencilBrush(canvas);
+        // brush.onMouseDown({ x: points[0].x, y: points[0].y }, options);
+        // for (i = 1; i < points.length - 1; i++) {
+        //     // canvas.add(new fabric.Line([points[i].x, points[i].y, points[i + 1].x, points[i + 1].y], {
+        //     //     stroke: 'black'
+        //     // }));
+        //     brush.onMouseMove({ x: points[i].x, y: points[i].y }, options)
+        // }
+
+        let lineCoordinates = [];
+
+        if (localStorage.getItem("lineCoordinates")) {
+            lineCoordinates = JSON.parse(localStorage.getItem("lineCoordinates"));
+        }
+
+        lineCoordinates.forEach(coOrdinates => {
+            var polygon = new fabric.Polygon(coOrdinates, {
+                // fill: 'black',
+                fill: 'transparent',
+                strokeWidth: 1,
+                stroke: 'black',
+            });
+
+            // Render the polygon in canvas
+            canvas.add(polygon);
+        })
+    }
+
+    restoreCoOrdinates();
+
+    function DownloadCanvasAsImage() {
+        // let downloadLink = document.createElement('a');
+        // downloadLink.setAttribute('download', 'CanvasAsImage.png');
+        // let canvas = document.getElementById('canvas');
+        // canvas.toBlob(function (blob) {
+        //     let url = URL.createObjectURL(blob);
+        //     downloadLink.setAttribute('href', url);
+        //     downloadLink.click();
+        // });
+        let canvasObj = document.getElementById("c")
+        console.log(canvasObj.toDataURL());
+    }
+
+</script>
+
+</html>
